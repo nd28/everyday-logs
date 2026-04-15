@@ -2,6 +2,27 @@
 
 Personal daily log system with todo.txt-style task management.
 
+> **Note**: Replace `nd28` with your GitHub username in the URLs above.
+
+## Install
+
+```bash
+# Quick install (uses ~/.local/bin by default)
+curl -sL https://raw.githubusercontent.com/nd28/everyday-logs/main/log > ~/.local/bin/log
+chmod +x ~/.local/bin/log
+
+# Add to PATH
+echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
+alias log=~/.local/bin/log
+```
+
+Or clone manually:
+```bash
+git clone https://github.com/nd28/everyday-logs.git ~/everyday-logs
+export PATH="$PATH:$HOME/everyday-logs"
+alias log="$HOME/everyday-logs/log"
+```
+
 ## Setup
 
 ```bash
@@ -27,6 +48,9 @@ alias log="$HOME/everyday-logs/log"
 | `log complete 1` | Mark task as done |
 | `log search <term>` | Search across all logs |
 | `log week` | Show last 7 days summary |
+| `log backup` | Commit changes to git |
+| `log restore <commit>` | Restore from git |
+| `log doctor` | Diagnose and quick tour |
 
 ## Files
 
