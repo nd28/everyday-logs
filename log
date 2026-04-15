@@ -57,7 +57,7 @@ today() {
 tasks() {
 	init
 	echo "=== TODO ==="
-	cat -n "$todo_file" | grep -vE '^[[:space:]]*#|^[[:space:]]*$' || true
+	grep -vE '^#|^$' "$todo_file" | cat -n || true
 	echo ""
 	echo "=== DONE (last 5) ==="
 	tail -5 "$done_file" 2>/dev/null | grep -vE '^#|^$' || true
@@ -146,6 +146,70 @@ restore() {
 	git checkout "$1" -- .
 }
 
+doctor() {
+	echo "=== everyday-logs Doctor ==="
+	echo ""
+
+	echo "1. Checking directory..."
+	if [[ -d $dir ]]; then
+		echo "   ✓ Directory exists: $dir"
+	else
+		echo "   ✗ Directory missing: $dir"
+		echo "   → Run 'log init' to create"
+	fi
+	echo ""
+
+	echo "2. Checking files..."
+	for f in todo.txt done.txt README.md; do
+		if [[ -f $dir/$f ]]; then
+			echo "   ✓ $f exists"
+		else
+			echo "   ✗ $f missing"
+		fi
+	done
+	echo ""
+
+	echo "3. Checking git..."
+	if [[ -d $dir/.git ]]; then
+		echo "   ✓ Git repo initialized"
+	else
+		echo "   ✗ Git not initialized"
+		echo "   → Run 'log backup' to init"
+	fi
+	echo ""
+
+	echo "4. Checking PATH..."
+	if [[ :$PATH: == *"$dir"* ]]; then
+		echo "   ✓ Directory in PATH"
+	else
+		echo "   ✗ Not in PATH"
+		echo "   → Add to shell rc: export PATH=\"\$PATH:$dir\""
+	fi
+	echo ""
+
+	echo "5. Checking EDITOR..."
+	if [[ -n ${EDITOR:-} ]]; then
+		echo "   ✓ EDITOR set to: $EDITOR"
+	else
+		echo "   ✗ EDITOR not set (defaulting to nvim)"
+	fi
+	echo ""
+
+	echo "=== Quick Tour ==="
+	echo ""
+	echo "Daily workflow:"
+	echo "  log new              → Create today's log"
+	echo "  log add \"Task\"      → Add a task"
+	echo "  log tasks            → View all tasks"
+	echo "  log complete 1       → Mark task #1 done"
+	echo "  log backup           → Commit to git"
+	echo ""
+	echo "Review:"
+	echo "  log today            → Open today's log"
+	echo "  log search <term>    → Search all logs"
+	echo "  log week             → Last 7 days summary"
+}
+
 help() {
 	cat << 'EOF'
 Usage: log <command>
@@ -161,6 +225,7 @@ Commands:
   week      Show last 7 days summary
   backup    Commit changes to git
   restore   Restore from git (Usage: log restore <commit>)
+  doctor    Diagnose and show quick tour
   help      Show this help
 
 Environment:
@@ -179,6 +244,7 @@ case ${1:-help} in
 	week) week ;;
 	backup) backup ;;
 	restore) restore "${2:-}" ;;
+	doctor) doctor ;;
 	help) help ;;
 	*) help ;;
 esac
