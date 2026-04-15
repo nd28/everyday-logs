@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+dir=${EVERYDAY_LOGS_DIR:-$HOME/everyday-logs}
+log_date=$(date +%Y-%m-%d)
+file=$dir/$log_date.md
+todo_file=$dir/todo.txt
+done_file=$dir/done.txt
+
+init() {
+	mkdir -p "$dir"
+	if [[ ! -f $todo_file ]]; then
+		echo "# Todo.txt - edit manually or use 'log add'" > "$todo_file"
+	fi
+	if [[ ! -f $done_file ]]; then
+		echo "# Done.txt - completed tasks" > "$done_file"
+	fi
+}
+
+new() {
+	init
+	if [[ -f $file ]]; then
+		echo "Today's log already exists: $file"
+		exit 1
+	fi
+	cat > "$file" << 'EOF'
+# Log - DATE
+
+## Tasks
+-
+
+## Notes
+-
+
+## Research
+-
+
+## Reminders
+-
+
+EOF
+	sed -i "s/DATE/$log_date/" "$file"
+	echo "Created: $file"
+	"$EDITOR" "${EDITOR:-nvim}" "$file"
+}
+
+today() {
+	init
+	if [[ ! -f $file ]]; then
+		echo "No log for today. Run 'log new' first."
+		exit 1
+	fi
+	"$EDITOR" "${EDITOR:-nvim}" "$file"
+}
+
+tasks() {
+	init
+	echo "=== TODO ==="
+	cat -n "$todo_file" | grep -vE '^[[:space:]]*#|^[[:space:]]*$' || true
+	echo ""
+	echo "=== DONE (last 5) ==="
+	tail -5 "$done_file" 2>/dev/null | grep -vE '^#|^$' || true
+}
+
+add() {
+	init
+	if [[ -z ${1:-} ]]; then
+		echo "Usage: log add <task>"
+		exit 1
+	fi
+	echo "$1" >> "$todo_file"
+	echo "Added: $1"
+}
+
+complete() {
+	init
+	if [[ -z ${1:-} ]]; then
+		echo "Usage: log complete <task number>"
+		exit 1
+	fi
+	task=$(sed -n "${1}p" "$todo_file")
+	if [[ -z $task ]] || [[ $task == \#* ]]; then
+		echo "No task at line $1"
+		exit 1
+	fi
+	sed -i "${1}d" "$todo_file"
+	echo "x $log_date $task" >> "$done_file"
+	echo "Marked done: $task"
+}
+
+search() {
+	if [[ -z ${1:-} ]]; then
+		echo "Usage: log search <term>"
+		exit 1
+	fi
+	term=$1
+	echo "=== Searching for: $term ==="
+	for f in "$dir"/[0-9]*.md; do
+		[[ -f $f ]] || continue
+		match=$(grep -i "$term" "$f")
+		if [[ -n $match ]]; then
+			echo ""
+			echo "--- ${f##*/} ---"
+			echo "$match"
+		fi
+	done
+}
+
+week() {
+	echo "=== Last 7 Days ==="
+	for i in {0..6}; do
+		date=$(date -d "-$i days" +%Y-%m-%d)
+		log=$dir/$date.md
+		if [[ -f $log ]]; then
+			echo ""
+			echo "--- $date ---"
+			grep -E '^## Tasks|^## Notes|^## Research' "$log" || true
+		fi
+	done
+}
+
+backup() {
+	if ! command -v git &>/dev/null; then
+		echo "git not found"
+		exit 1
+	fi
+	cd "$dir" || exit
+	if [[ ! -d .git ]]; then
+		git init
+		git add .
+		git commit -m "Initial commit"
+		echo "Initialized git repo"
+	fi
+	git add .
+	git commit -m "Backup: $log_date" || echo "No changes to commit"
+	echo "Backup complete"
+}
+
+restore() {
+	if [[ -z ${1:-} ]]; then
+		echo "Usage: log restore <commit>"
+		exit 1
+	fi
+	cd "$dir" || exit
+	git checkout "$1" -- .
+}
+
+help() {
+	cat << 'EOF'
+Usage: log <command>
+
+Commands:
+  init      Initialize everyday-logs (scaffold files)
+  new       Create today's log entry
+  today     Open today's log
+  tasks     Show todo and recent done tasks
+  add       Add a task (Usage: log add "Buy milk")
+  complete  Mark task as done (Usage: log complete 1)
+  search    Search all logs (Usage: log search <term>)
+  week      Show last 7 days summary
+  backup    Commit changes to git
+  restore   Restore from git (Usage: log restore <commit>)
+  help      Show this help
+
+Environment:
+  EVERYDAY_LOGS_DIR  Set custom directory (default: ~/everyday-logs)
+EOF
+}
+
+case ${1:-help} in
+	init) init && echo "Initialized at $dir" ;;
+	new) new ;;
+	today) today ;;
+	tasks) tasks ;;
+	add) add "${2:-}" ;;
+	complete) complete "${2:-}" ;;
+	search) search "${2:-}" ;;
+	week) week ;;
+	backup) backup ;;
+	restore) restore "${2:-}" ;;
+	help) help ;;
+	*) help ;;
+esac
