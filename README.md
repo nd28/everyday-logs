@@ -14,6 +14,10 @@ chmod +x ~/.local/bin/log
 # Add to PATH
 echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
 alias log=~/.local/bin/log
+
+# Bash completions (optional)
+curl -sL https://raw.githubusercontent.com/nd28/everyday-logs/main/completions.bash >> ~/.bashrc
+source ~/.bashrc
 ```
 
 Or clone manually:

@@ -42,7 +42,7 @@ new() {
 EOF
 	sed -i "s/DATE/$log_date/" "$file"
 	echo "Created: $file"
-	"$EDITOR" "${EDITOR:-nvim}" "$file"
+	${EDITOR:-nvim} "$file"
 }
 
 today() {
@@ -51,7 +51,7 @@ today() {
 		echo "No log for today. Run 'log new' first."
 		exit 1
 	fi
-	"$EDITOR" "${EDITOR:-nvim}" "$file"
+	${EDITOR:-nvim} "$file"
 }
 
 tasks() {
