@@ -5,6 +5,8 @@ _log_completions() {
 		"today"
 		"tasks"
 		"add"
+		"edit"
+		"delete"
 		"complete"
 		"search"
 		"week"
@@ -23,7 +25,7 @@ _log_completions() {
 			COMPREPLY=()
 			return
 			;;
-		complete|restore|search)
+		complete|restore|search|edit|delete)
 			COMPREPLY=()
 			return
 			;;

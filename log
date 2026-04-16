@@ -76,8 +76,21 @@ add() {
 complete() {
 	init
 	if [[ -z ${1:-} ]]; then
-		echo "Usage: log complete <task number>"
-		exit 1
+		if command -v fzf &>/dev/null; then
+			task=$(grep -vE '^#|^$' "$todo_file" | fzf --prompt="Select task to complete> " --height=~50% --reverse)
+			if [[ -z $task ]]; then
+				echo "No task selected"
+				exit 1
+			fi
+			grep -v -F -- "$task" "$todo_file" > "$todo_file.tmp" && mv "$todo_file.tmp" "$todo_file"
+			echo "x $log_date $task" >> "$done_file"
+			echo "Marked done: $task"
+			exit 0
+		else
+			echo "Usage: log complete <task number>"
+			echo "Or install fzf for interactive: brew install fzf"
+			exit 1
+		fi
 	fi
 	task=$(sed -n "${1}p" "$todo_file")
 	if [[ -z $task ]] || [[ $task == \#* ]]; then
@@ -90,8 +103,24 @@ complete() {
 }
 
 search() {
+	if command -v fzf &>/dev/null && [[ -z ${1:-} ]]; then
+		results=""
+		for f in "$dir"/[0-9]*.md; do
+			[[ -f $f ]] || continue
+			while IFS= read -r line; do
+				[[ -n $line ]] && results+="${f##*/}: $line"$'\n'
+			done < <(grep -in '.' "$f")
+		done
+		if [[ -z $results ]]; then
+			echo "No logs found"
+			exit 1
+		fi
+		echo "$results" | fzf --prompt="Search logs> " --height=~80% --nth=2..
+		exit 0
+	fi
 	if [[ -z ${1:-} ]]; then
 		echo "Usage: log search <term>"
+		echo "       log search       (interactive with fzf)"
 		exit 1
 	fi
 	term=$1
@@ -195,19 +224,69 @@ doctor() {
 	fi
 	echo ""
 
+	echo "6. Checking fzf..."
+	if command -v fzf &>/dev/null; then
+		echo "   ✓ fzf installed (interactive features available)"
+	else
+		echo "   ✗ fzf not found"
+		echo "   → Install: brew install fzf (or apt install fzf)"
+	fi
+	echo ""
+
 	echo "=== Quick Tour ==="
 	echo ""
 	echo "Daily workflow:"
 	echo "  log new              → Create today's log"
 	echo "  log add \"Task\"      → Add a task"
 	echo "  log tasks            → View all tasks"
-	echo "  log complete 1       → Mark task #1 done"
+	echo "  log edit             → Edit task (fzf)"
+	echo "  log delete           → Delete task (fzf)"
+	echo "  log complete         → Mark done (fzf or number)"
 	echo "  log backup           → Commit to git"
 	echo ""
 	echo "Review:"
 	echo "  log today            → Open today's log"
-	echo "  log search <term>    → Search all logs"
+	echo "  log search           → Search logs (fzf or term)"
 	echo "  log week             → Last 7 days summary"
+}
+
+edit() {
+	init
+	if command -v fzf &>/dev/null; then
+		task=$(grep -vE '^#|^$' "$todo_file" | fzf --prompt="Select task to edit> " --height=~50% --reverse)
+		if [[ -z $task ]]; then
+			echo "No task selected"
+			exit 1
+		fi
+		read -p "Edit task: " -i "$task" new_task
+		while IFS= read -r line; do
+			if [[ "$line" == "$task" ]]; then
+				echo "$new_task"
+			else
+				echo "$line"
+			fi
+		done < "$todo_file" > "$todo_file.tmp" && mv "$todo_file.tmp" "$todo_file"
+		echo "Updated: $task → $new_task"
+	else
+		echo "fzf not found. Install: brew install fzf (or apt install fzf)"
+		exit 1
+	fi
+}
+
+delete() {
+	init
+	if command -v fzf &>/dev/null; then
+		task=$(grep -vE '^#|^$' "$todo_file" | fzf --prompt="Select task to delete> " --height=~50% --reverse)
+		if [[ -z $task ]]; then
+			echo "No task selected"
+			exit 1
+		fi
+		grep -v -F -- "$task" "$todo_file" > "$todo_file.tmp" && mv "$todo_file.tmp" "$todo_file"
+		echo "Deleted: $task"
+	else
+		echo "fzf not found. Install: brew install fzf (or apt install fzf)"
+		exit 1
+	fi
 }
 
 help() {
@@ -220,8 +299,10 @@ Commands:
   today     Open today's log
   tasks     Show todo and recent done tasks
   add       Add a task (Usage: log add "Buy milk")
-  complete  Mark task as done (Usage: log complete 1)
-  search    Search all logs (Usage: log search <term>)
+  edit      Edit a task interactively (requires fzf)
+  delete   Delete a task interactively (requires fzf)
+  complete  Mark task as done (Usage: log complete 1, or use fzf)
+  search    Search all logs (Usage: log search <term>, or interactive with fzf)
   week      Show last 7 days summary
   backup    Commit changes to git
   restore   Restore from git (Usage: log restore <commit>)
@@ -239,6 +320,8 @@ case ${1:-help} in
 	today) today ;;
 	tasks) tasks ;;
 	add) add "${2:-}" ;;
+	edit) edit ;;
+	delete) delete ;;
 	complete) complete "${2:-}" ;;
 	search) search "${2:-}" ;;
 	week) week ;;

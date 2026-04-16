@@ -34,7 +34,13 @@ export PATH="$PATH:$HOME/everyday-logs"
 alias log="$HOME/everyday-logs/log"
 ```
 
-Or add to shell rc:
+Install [fzf](https://github.com/junegunn/fzf) for interactive task selection:
+```bash
+# fzf is optional - falls back to numbered selection
+brew install fzf  # or apt install fzf, pacman -S fzf, etc.
+```
+
+## Setup
 ```bash
 # everyday-logs
 export EVERYDAY_LOGS_DIR="$HOME/everyday-logs"
@@ -49,8 +55,10 @@ alias log="$HOME/everyday-logs/log"
 | `log today` | Open today's log |
 | `log tasks` | Show todo and recent done tasks |
 | `log add "Task"` | Add a task |
-| `log complete 1` | Mark task as done |
-| `log search <term>` | Search across all logs |
+| `log edit` | Edit task interactively (fzf) |
+| `log delete` | Delete task interactively (fzf) |
+| `log complete` | Mark task done (fzf or number) |
+| `log search` | Search logs (fzf or term) |
 | `log week` | Show last 7 days summary |
 | `log backup` | Commit changes to git |
 | `log restore <commit>` | Restore from git |
